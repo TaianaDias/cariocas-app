@@ -1,258 +1,181 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍔 Carioca's Sistema</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-<style>
-body{font-family:Poppins;background:#0B0B0B;color:#fff;margin:0;}
-header{background:#E8351A;padding:15px;text-align:center;font-weight:bold;}
-.container{padding:15px;}
-.card{background:#161616;border-radius:12px;padding:15px;margin-bottom:15px;}
-input,button,select{width:100%;padding:12px;margin-top:8px;border:none;border-radius:8px;}
-input{background:#222;color:#fff;}
-button{background:#E8351A;color:#fff;font-weight:bold;}
-.nav{display:flex;justify-content:space-around;background:#111;position:fixed;bottom:0;width:100%;}
-.nav button{background:none;color:#fff;}
-.hidden{display:none;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍔 Carioca's Sistema</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: Poppins, sans-serif; background: #0B0B0B; color: #fff; margin: 0; }
+    header { background: #E8351A; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; }
+    .container { padding: 15px; max-width: 480px; margin: 0 auto; }
+    .card { background: #161616; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+    input, button { width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 8px; box-sizing: border-box; font-family: Poppins, sans-serif; font-size: 0.95rem; }
+    input { background: #222; color: #fff; }
+    input::placeholder { color: #888; }
+    button { background: #E8351A; color: #fff; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #333; margin-top: 8px; }
+    .hidden { display: none; }
+    .error { color: #ff6b6b; font-size: 0.85rem; margin-top: 8px; }
+    .user-info { color: #aaa; font-size: 0.85rem; margin-bottom: 5px; }
+  </style>
 </head>
 
 <body>
 
-<header>🍔 Carioca's Sistema</header>
+  <header>🍔 Carioca's Sistema</header>
 
-<!-- LOGIN -->
-<div id="login" class="container">
-<div class="card">
-<h3>Login</h3>
-<input id="email" placeholder="Email">
-<input id="senha" type="password" placeholder="Senha">
-<button onclick="login()">Entrar</button>
-<button onclick="register()">Cadastrar</button>
-</div>
-</div>
+  <!-- LOGIN -->
+  <div id="loginScreen" class="container">
+    <div class="card">
+      <h3>Login</h3>
+      <input id="email" type="email" placeholder="Email" autocomplete="email">
+      <input id="senha" type="password" placeholder="Senha" autocomplete="current-password">
+      <p id="errorMsg" class="error hidden"></p>
+      <button id="btnLogin" onclick="login()">Entrar</button>
+      <button id="btnCadastrar" class="btn-secondary" onclick="cadastrar()">Cadastrar</button>
+    </div>
+  </div>
 
-<!-- APP -->
-<div id="app" class="hidden">
+  <!-- APP -->
+  <div id="app" class="hidden container">
+    <div class="card">
+      <h3>🎉 Bem-vindo!</h3>
+      <p id="welcomeMsg" class="user-info"></p>
+      <p>Sistema funcionando com sucesso 🚀</p>
+      <button onclick="logout()">Sair</button>
+    </div>
+  </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="container">
-<div class="card">
-<h3>📊 Hoje</h3>
-<p id="faturamento"></p>
-<p id="custo"></p>
-<p id="lucro"></p>
-</div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-<div class="card">
-<h3>💰 Caixa</h3>
-<button onclick="abrirCaixa()">Abrir Caixa</button>
-<button onclick="fecharCaixa()">Fechar Caixa</button>
-<p id="statusCaixa"></p>
-</div>
-</div>
+    // ✅ SUBSTITUA pelo seu appId completo no Firebase Console
+    // Projeto > Configurações > Seus apps > appId
+    const firebaseConfig = {
+      apiKey: "AIzaSyD1hU802zK92ktgJqXgSiC1VlcYkEWtAQg",
+      authDomain: "cariocas-app.firebaseapp.com",
+      projectId: "cariocas-app",
+      storageBucket: "cariocas-app.appspot.com",
+      messagingSenderId: "606557023897",
+      appId: "COLE_SEU_APP_ID_COMPLETO_AQUI", // ⚠️ O seu estava incompleto!
+      measurementId: "G-SVEYVZ53PE"
+    };
 
-<!-- ESTOQUE -->
-<div id="estoque" class="container hidden">
-<div class="card">
-<h3>📦 Produto</h3>
-<input id="produto" placeholder="Nome">
-<input id="qtd" type="number" placeholder="Qtd">
-<input id="custoProd" type="number" placeholder="Custo">
-<input id="vendaProd" type="number" placeholder="Venda">
-<button onclick="entrada()">Entrada</button>
-</div>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
 
-<div class="card">
-<ul id="lista"></ul>
-</div>
-</div>
+    // --- Helpers ---
+    function setLoading(loading) {
+      document.getElementById("btnLogin").disabled = loading;
+      document.getElementById("btnCadastrar").disabled = loading;
+    }
 
-<!-- PEDIDOS -->
-<div id="vendas" class="container hidden">
-<div class="card">
-<h3>🍔 Novo Pedido</h3>
+    function showError(msg) {
+      const el = document.getElementById("errorMsg");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+    }
 
-<div id="cardapio"></div>
+    function clearError() {
+      const el = document.getElementById("errorMsg");
+      el.textContent = "";
+      el.classList.add("hidden");
+    }
 
-<h3>Total: R$ <span id="totalPedido">0.00</span></h3>
+    function getFields() {
+      return {
+        email: document.getElementById("email").value.trim(),
+        senha: document.getElementById("senha").value
+      };
+    }
 
-<select id="pagamento">
-<option>Dinheiro</option>
-<option>Pix</option>
-<option>Cartão</option>
-</select>
+    // --- Cadastro ---
+    window.cadastrar = async function () {
+      clearError();
+      const { email, senha } = getFields();
 
-<button onclick="finalizarPedido()">Finalizar Pedido</button>
-</div>
-</div>
+      if (!email || !senha) {
+        showError("Preencha email e senha.");
+        return;
+      }
+      if (senha.length < 6) {
+        showError("A senha precisa ter pelo menos 6 caracteres.");
+        return;
+      }
 
-<!-- NAV -->
-<div class="nav">
-<button onclick="trocar('dashboard')">📊</button>
-<button onclick="trocar('estoque')">📦</button>
-<button onclick="trocar('vendas')">🍔</button>
-</div>
+      setLoading(true);
+      try {
+        await createUserWithEmailAndPassword(auth, email, senha);
+        alert("Cadastro realizado! Você já está logado.");
+      } catch (error) {
+        showError(friendlyError(error.code));
+      } finally {
+        setLoading(false);
+      }
+    };
 
-</div>
+    // --- Login ---
+    window.login = async function () {
+      clearError();
+      const { email, senha } = getFields();
 
-<script>
+      if (!email || !senha) {
+        showError("Preencha email e senha.");
+        return;
+      }
 
-// 🔥 CONFIG (JÁ PRONTO)
-const firebaseConfig = {
-  apiKey: "AIzaSyD1hU802zK92ktgJqXgSiC1...",
-  authDomain: "cariocas-app.firebaseapp.com",
-  projectId: "cariocas-app"
-};
+      setLoading(true);
+      try {
+        await signInWithEmailAndPassword(auth, email, senha);
+      } catch (error) {
+        showError(friendlyError(error.code));
+      } finally {
+        setLoading(false);
+      }
+    };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+    // --- Logout ---
+    window.logout = function () {
+      signOut(auth);
+    };
 
-let usuario="";
-let pedido=[];
-let total=0;
+    // --- Auth state ---
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById("loginScreen").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        document.getElementById("welcomeMsg").textContent = `Logado como: ${user.email}`;
+      } else {
+        document.getElementById("loginScreen").classList.remove("hidden");
+        document.getElementById("app").classList.add("hidden");
+      }
+    });
 
-// LOGIN
-function login(){
-auth.signInWithEmailAndPassword(email.value, senha.value)
-.then(u=>{usuario=u.user.email;init();});
-}
-
-function register(){
-auth.createUserWithEmailAndPassword(email.value, senha.value)
-.then(u=>{usuario=u.user.email;init();});
-}
-
-function init(){
-login.style.display="none";
-app.classList.remove("hidden");
-carregar();
-}
-
-// NAV
-function trocar(t){
-dashboard.classList.add("hidden");
-estoque.classList.add("hidden");
-vendas.classList.add("hidden");
-document.getElementById(t).classList.remove("hidden");
-}
-
-// ESTOQUE
-function entrada(){
-db.collection("produtos").doc(produto.value).set({
-qtd:parseInt(qtd.value),
-custo:parseFloat(custoProd.value),
-venda:parseFloat(vendaProd.value)
-});
-}
-
-// CARDÁPIO
-function carregarCardapio(){
-db.collection("produtos").onSnapshot(snapshot=>{
-cardapio.innerHTML="";
-snapshot.forEach(doc=>{
-let d=doc.data();
-cardapio.innerHTML+=`
-<div>
-<b>${doc.id}</b> - R$ ${d.venda}
-<button onclick="addPedido('${doc.id}',${d.venda})">+</button>
-</div>`;
-});
-});
-}
-
-function addPedido(nome,valor){
-pedido.push({nome,valor});
-total+=valor;
-totalPedido.innerText=total.toFixed(2);
-}
-
-// FINALIZAR
-function finalizarPedido(){
-pedido.forEach(item=>{
-const ref=db.collection("produtos").doc(item.nome);
-
-ref.get().then(doc=>{
-let d=doc.data();
-
-ref.update({qtd:d.qtd-1});
-
-db.collection("vendas").add({
-produto:item.nome,
-qtd:1,
-valor:item.valor,
-custo:d.custo,
-user:usuario,
-pagamento:pagamento.value,
-data:new Date()
-});
-});
-});
-
-pedido=[];
-total=0;
-totalPedido.innerText="0.00";
-alert("Pedido finalizado 🚀");
-}
-
-// CAIXA
-function abrirCaixa(){
-db.collection("caixa").doc("hoje").set({
-status:"aberto",
-abertoPor:usuario,
-data:new Date()
-});
-statusCaixa.innerText="Caixa aberto";
-}
-
-function fecharCaixa(){
-db.collection("caixa").doc("hoje").update({
-status:"fechado",
-fechadoPor:usuario
-});
-statusCaixa.innerText="Caixa fechado";
-}
-
-// TEMPO REAL
-function carregar(){
-
-// ESTOQUE
-db.collection("produtos").onSnapshot(s=>{
-lista.innerHTML="";
-s.forEach(doc=>{
-let d=doc.data();
-lista.innerHTML+=`<li>${doc.id} - ${d.qtd}</li>`;
-});
-});
-
-// FINANCEIRO
-db.collection("vendas").onSnapshot(s=>{
-let fat=0,custoTotal=0;
-
-s.forEach(doc=>{
-let d=doc.data();
-fat+=d.valor*d.qtd;
-custoTotal+=d.custo*d.qtd;
-});
-
-faturamento.innerText="💰 "+fat.toFixed(2);
-custo.innerText="💸 "+custoTotal.toFixed(2);
-lucro.innerText="📈 "+(fat-custoTotal).toFixed(2);
-});
-
-carregarCardapio();
-}
-
-</script>
+    // --- Mensagens de erro amigáveis ---
+    function friendlyError(code) {
+      const errors = {
+        "auth/user-not-found": "Usuário não encontrado.",
+        "auth/wrong-password": "Senha incorreta.",
+        "auth/invalid-email": "Email inválido.",
+        "auth/email-already-in-use": "Este email já está cadastrado.",
+        "auth/weak-password": "Senha muito fraca. Use ao menos 6 caracteres.",
+        "auth/too-many-requests": "Muitas tentativas. Tente novamente mais tarde.",
+        "auth/invalid-credential": "Credenciais inválidas. Verifique email e senha.",
+        "auth/network-request-failed": "Erro de conexão. Verifique sua internet."
+      };
+      return errors[code] || "Ocorreu um erro. Tente novamente.";
+    }
+  </script>
 
 </body>
 </html>
