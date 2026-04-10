@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍔 Carioca's Sistema</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<style>
+body{font-family:Poppins;background:#0B0B0B;color:#fff;margin:0;}
+header{background:#E8351A;padding:15px;text-align:center;font-weight:bold;}
+.container{padding:15px;}
+.card{background:#161616;border-radius:12px;padding:15px;margin-bottom:15px;}
+input,button,select{width:100%;padding:12px;margin-top:8px;border:none;border-radius:8px;}
+input{background:#222;color:#fff;}
+button{background:#E8351A;color:#fff;font-weight:bold;}
+.nav{display:flex;justify-content:space-around;background:#111;position:fixed;bottom:0;width:100%;}
+.nav button{background:none;color:#fff;}
+.hidden{display:none;}
+</style>
+</head>
+
+<body>
+
+<header>🍔 Carioca's Sistema</header>
+
+<!-- LOGIN -->
+<div id="login" class="container">
+<div class="card">
+<h3>Login</h3>
+<input id="email" placeholder="Email">
+<input id="senha" type="password" placeholder="Senha">
+<button onclick="login()">Entrar</button>
+<button onclick="register()">Cadastrar</button>
+</div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="container">
+<div class="card">
+<h3>📊 Hoje</h3>
+<p id="faturamento"></p>
+<p id="custo"></p>
+<p id="lucro"></p>
+</div>
+
+<div class="card">
+<h3>💰 Caixa</h3>
+<button onclick="abrirCaixa()">Abrir Caixa</button>
+<button onclick="fecharCaixa()">Fechar Caixa</button>
+<p id="statusCaixa"></p>
+</div>
+</div>
+
+<!-- ESTOQUE -->
+<div id="estoque" class="container hidden">
+<div class="card">
+<h3>📦 Produto</h3>
+<input id="produto" placeholder="Nome">
+<input id="qtd" type="number" placeholder="Qtd">
+<input id="custoProd" type="number" placeholder="Custo">
+<input id="vendaProd" type="number" placeholder="Venda">
+<button onclick="entrada()">Entrada</button>
+</div>
+
+<div class="card">
+<ul id="lista"></ul>
+</div>
+</div>
+
+<!-- PEDIDOS -->
+<div id="vendas" class="container hidden">
+<div class="card">
+<h3>🍔 Novo Pedido</h3>
+
+<div id="cardapio"></div>
+
+<h3>Total: R$ <span id="totalPedido">0.00</span></h3>
+
+<select id="pagamento">
+<option>Dinheiro</option>
+<option>Pix</option>
+<option>Cartão</option>
+</select>
+
+<button onclick="finalizarPedido()">Finalizar Pedido</button>
+</div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+<button onclick="trocar('dashboard')">📊</button>
+<button onclick="trocar('estoque')">📦</button>
+<button onclick="trocar('vendas')">🍔</button>
+</div>
+
+</div>
+
+<script>
+
+// 🔥 CONFIG (JÁ PRONTO)
+const firebaseConfig = {
+  apiKey: "AIzaSyD1hU802zK92ktgJqXgSiC1...",
+  authDomain: "cariocas-app.firebaseapp.com",
+  projectId: "cariocas-app"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let usuario="";
+let pedido=[];
+let total=0;
+
+// LOGIN
+function login(){
+auth.signInWithEmailAndPassword(email.value, senha.value)
+.then(u=>{usuario=u.user.email;init();});
+}
+
+function register(){
+auth.createUserWithEmailAndPassword(email.value, senha.value)
+.then(u=>{usuario=u.user.email;init();});
+}
+
+function init(){
+login.style.display="none";
+app.classList.remove("hidden");
+carregar();
+}
+
+// NAV
+function trocar(t){
+dashboard.classList.add("hidden");
+estoque.classList.add("hidden");
+vendas.classList.add("hidden");
+document.getElementById(t).classList.remove("hidden");
+}
+
+// ESTOQUE
+function entrada(){
+db.collection("produtos").doc(produto.value).set({
+qtd:parseInt(qtd.value),
+custo:parseFloat(custoProd.value),
+venda:parseFloat(vendaProd.value)
+});
+}
+
+// CARDÁPIO
+function carregarCardapio(){
+db.collection("produtos").onSnapshot(snapshot=>{
+cardapio.innerHTML="";
+snapshot.forEach(doc=>{
+let d=doc.data();
+cardapio.innerHTML+=`
+<div>
+<b>${doc.id}</b> - R$ ${d.venda}
+<button onclick="addPedido('${doc.id}',${d.venda})">+</button>
+</div>`;
+});
+});
+}
+
+function addPedido(nome,valor){
+pedido.push({nome,valor});
+total+=valor;
+totalPedido.innerText=total.toFixed(2);
+}
+
+// FINALIZAR
+function finalizarPedido(){
+pedido.forEach(item=>{
+const ref=db.collection("produtos").doc(item.nome);
+
+ref.get().then(doc=>{
+let d=doc.data();
+
+ref.update({qtd:d.qtd-1});
+
+db.collection("vendas").add({
+produto:item.nome,
+qtd:1,
+valor:item.valor,
+custo:d.custo,
+user:usuario,
+pagamento:pagamento.value,
+data:new Date()
+});
+});
+});
+
+pedido=[];
+total=0;
+totalPedido.innerText="0.00";
+alert("Pedido finalizado 🚀");
+}
+
+// CAIXA
+function abrirCaixa(){
+db.collection("caixa").doc("hoje").set({
+status:"aberto",
+abertoPor:usuario,
+data:new Date()
+});
+statusCaixa.innerText="Caixa aberto";
+}
+
+function fecharCaixa(){
+db.collection("caixa").doc("hoje").update({
+status:"fechado",
+fechadoPor:usuario
+});
+statusCaixa.innerText="Caixa fechado";
+}
+
+// TEMPO REAL
+function carregar(){
+
+// ESTOQUE
+db.collection("produtos").onSnapshot(s=>{
+lista.innerHTML="";
+s.forEach(doc=>{
+let d=doc.data();
+lista.innerHTML+=`<li>${doc.id} - ${d.qtd}</li>`;
+});
+});
+
+// FINANCEIRO
+db.collection("vendas").onSnapshot(s=>{
+let fat=0,custoTotal=0;
+
+s.forEach(doc=>{
+let d=doc.data();
+fat+=d.valor*d.qtd;
+custoTotal+=d.custo*d.qtd;
+});
+
+faturamento.innerText="💰 "+fat.toFixed(2);
+custo.innerText="💸 "+custoTotal.toFixed(2);
+lucro.innerText="📈 "+(fat-custoTotal).toFixed(2);
+});
+
+carregarCardapio();
+}
+
+</script>
+
+</body>
+</html>
