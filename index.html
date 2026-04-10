@@ -67,8 +67,8 @@
       projectId: "cariocas-app",
       storageBucket: "cariocas-app.appspot.com",
       messagingSenderId: "606557023897",
-      appId: "COLE_SEU_APP_ID_COMPLETO_AQUI", // ⚠️ O seu estava incompleto!
-      measurementId: "G-SVEYVZ53PE"
+      appId: "1:606557023897:web:ea105fb168e01736a69208",
+  measurementId: "G-SVEYZV53PE"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -173,7 +173,9 @@
         "auth/invalid-credential": "Credenciais inválidas. Verifique email e senha.",
         "auth/network-request-failed": "Erro de conexão. Verifique sua internet."
       };
-      return errors[code] || "Ocorreu um erro. Tente novamente.";
+      Console.log ( error );
+      alert ( error.code );
+      
     }
   </script>
 
